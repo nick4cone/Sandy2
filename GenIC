@@ -1,0 +1,38 @@
+#!/bin/sh
+echo Generate IC file...
+RDADIR=/glade/campaign/collections/rda/data/ds633.0/
+SE_SCRIP=/glade/u/home/nforcone/vr-cesm-toolkit/generate_SE_GLL_scrip/newmesh1_np4_SCRIP.nc
+SE_NAME="ATL.ne16x2"
+
+## Generate a weight file from ERA5 -> target grid
+(set -x; ncl ${BETACAST}/remapping/gen_analysis_to_model_wgt_file.ncl \
+'ANLGRID="era5_0.25x0.25"' \
+'ANLGRIDPATH="'${BETACAST}'/remapping/anl_scrip/"' \
+'DSTGRIDNAME="'${SE_NAME}'"' \
+'DSTGRIDFILE="'${SE_SCRIP}'"' \
+'WGTFILEDIR="./"' \
+)
+
+## This generates a WGTFILE named this:
+WGTFILE="./map_era5_0.25x0.25_TO_${SE_NAME}_patc.nc"
+
+echo Invoke Betacast atm_to_cam...
+## Invoke Betacast atm_to_cam
+ncl -n ${BETACAST}/atm_to_cam/atm_to_cam.ncl 'datasource="ERA5RDA"' \
+numlevels=32 \
+YYYYMMDDHH=2012102400 \
+'dycore="se"' \
+'data_filename = "'${RDADIR}'/e5.oper.invariant/197901/e5.oper.invariant.128_129_z.ll025sc.1979010100_1979010100.nc"' \
+'wgt_filename="'${WGTFILE}'"' \
+'RDADIR="'${RDADIR}'"' \
+mpas_as_cam=True \
+'model_topo_file="/glade/derecho/scratch/pel/NCF_topo_gmted2010_modis_bedmachine_nc3000_Laplace0200_noleak_20241127.nc"' \
+'adjust_config=""' \
+compress_file=True \
+write_floats=True \
+add_cloud_vars=True \
+'se_inic = "./se_initial_condition.nc"'
+
+echo Cleanup...
+## Cleanup
+rm -v $WGTFILE
